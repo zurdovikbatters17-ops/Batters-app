@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111111">
+<link rel="manifest" href="manifest.webmanifest">
+<title>BATTERS</title>
+<style>
+:root{--bg:#f5f5f5;--card:#fff;--ink:#171717;--muted:#666;--red:#b51f28;--line:#ddd;--green:#216e39}
+*{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:#111;color:white;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:5}
+.brand{display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:.6px}.bat{font-size:28px}.season{font-size:12px;color:#ddd}
+main{max-width:1200px;margin:auto;padding:14px}.tabs{display:flex;gap:8px;overflow:auto;padding-bottom:8px}
+button,.btn,select,input{font:inherit} button,.btn{border:0;border-radius:12px;padding:12px 14px;font-weight:750;cursor:pointer;min-height:46px}
+.tab{background:#e6e6e6;white-space:nowrap}.tab.active,.primary{background:var(--red);color:#fff}.dark{background:#171717;color:#fff}.light{background:#eee;color:#111}.danger{background:#8b1820;color:#fff}
+.grid{display:grid;grid-template-columns:1fr;gap:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+h2,h3{margin:0 0 10px}.muted{color:var(--muted);font-size:14px}.hidden{display:none!important}
+.player{display:grid;grid-template-columns:52px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #eee}.avatar{width:48px;height:48px;border-radius:50%;background:#222;color:#fff;display:grid;place-items:center;font-weight:900}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.field{display:grid;gap:5px;flex:1;min-width:160px}.field input,.field select{width:100%;padding:11px;border:1px solid #ccc;border-radius:10px;background:white}
+.score{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;text-align:center}.score .n{font-size:44px;font-weight:900}.teamname{font-weight:850}
+.counts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}.count{background:#eee;border-radius:12px;padding:10px}.count strong{font-size:26px;display:block}
+.actions{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.actions button{font-size:16px}.good{background:#dcefdc}.out{background:#f0dddd}.walk{background:#e8e2f5}
+.diamond{width:210px;height:210px;margin:4px auto 14px;position:relative}.base{position:absolute;width:54px;height:54px;transform:rotate(45deg);background:#ddd;border:2px solid #aaa;border-radius:7px}.base span{display:block;transform:rotate(-45deg);font-size:12px;text-align:center;padding-top:16px}.base.on{background:#f0c34c;border-color:#9c7410}.b1{right:8px;top:78px}.b2{left:78px;top:8px}.b3{left:8px;top:78px}.home{left:78px;bottom:8px;background:#222;border-color:#222;color:#fff}
+.innings{overflow:auto}.innings table,.stats{border-collapse:collapse;width:100%;min-width:520px}.innings th,.innings td,.stats th,.stats td{border-bottom:1px solid #ddd;padding:8px;text-align:center}.innings th:first-child,.innings td:first-child,.stats th:first-child,.stats td:first-child{text-align:left;position:sticky;left:0;background:white}
+.lineup-row{display:grid;grid-template-columns:36px 1fr 92px;gap:8px;align-items:center;margin:7px 0}.lineup-row select{padding:9px;border:1px solid #ccc;border-radius:9px;background:white}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#111;color:#fff;padding:10px 14px;border-radius:10px;display:none;z-index:20}
+@media(min-width:800px){.grid.two{grid-template-columns:1fr 1.35fr}.actions{grid-template-columns:repeat(4,1fr)}main{padding:18px}.game-layout{display:grid;grid-template-columns:.9fr 1.25fr .9fr;gap:12px}}
+</style>
+</head>
+<body>
+<header><div class="brand"><span class="bat">🦇</span><div>BATTERS<div class="season">Anotador de béisbol · Español</div></div></div><div id="saveState" class="season">Guardado local</div></header>
+<main>
+<div class="tabs">
+<button class="tab active" data-view="home">⚾ Inicio</button>
+<button class="tab" data-view="team">👥 Mi equipo</button>
+<button class="tab" data-view="game">📝 Partido</button>
+<button class="tab" data-view="history">📋 Partidos</button>
+<button class="tab" data-view="season">🏆 Temporada</button>
+</div>
+
+<section id="home" class="view">
+<div class="grid two">
+<div class="card"><h2>BATTERS</h2><p class="muted">Equipo piloto · plantilla permanente</p><div id="homeRoster"></div></div>
+<div class="card"><h2>Nuevo partido</h2><p>Primero selecciona quiénes asistieron; después arma el lineup y asigna las posiciones de hoy.</p><button class="primary" id="startSetup">⚾ Preparar partido</button><p class="muted">La posición no modifica la ficha permanente del jugador.</p></div>
+</div>
+</section>
+
+<section id="team" class="view hidden">
+<div class="card"><h2>Plantilla BATTERS</h2><p class="muted">Nombre y número son permanentes. Las posiciones se asignan en cada partido.</p><div id="roster"></div>
+<div class="row" style="margin-top:12px"><button class="dark" id="addPlayer">＋ Agregar jugador</button></div></div>
+</section>
+
+<section id="game" class="view hidden">
+<div id="setupCard" class="card">
+<h2>Preparar partido</h2>
+<div class="row"><label class="field">Rival<input id="opponent" placeholder="Nombre del rival"></label><label class="field">Temporada<input id="seasonName" value="Temporada 2026"></label></div>
+<h3 style="margin-top:16px">1. ¿Quiénes vinieron hoy?</h3><div id="attendance"></div>
+<h3 style="margin-top:16px">2. Lineup y posición</h3><div id="lineupSetup"></div>
+<div class="row" style="margin-top:14px"><button class="primary" id="beginGame">Iniciar partido</button></div>
+</div>
+
+<div id="liveGame" class="hidden">
+<div class="card score"><div><div class="teamname">BATTERS</div><div class="n" id="ourScore">0</div></div><div><strong id="inningLabel">1ª ▲</strong><div class="muted" id="halfLabel">Alta</div></div><div><div class="teamname" id="oppName">Rival</div><div class="n" id="oppScore">0</div></div></div>
+<div class="game-layout" style="margin-top:12px">
+<div class="card"><h3>Turno al bat</h3><div id="currentBatter"></div><div class="counts"><div class="count">B<strong id="balls">0</strong></div><div class="count">S<strong id="strikes">0</strong></div><div class="count">O<strong id="outs">0</strong></div></div><div class="row" style="margin-top:10px"><button class="light" id="ball">Bola</button><button class="light" id="strike">Strike</button><button class="out" id="out">Out</button></div></div>
+<div class="card"><h3>Corredores</h3><div class="diamond"><button class="base b2" data-base="2"><span>2ª</span></button><button class="base b3" data-base="3"><span>3ª</span></button><button class="base b1" data-base="1"><span>1ª</span></button><div class="base home"><span>HOME</span></div></div>
+<div class="actions"><button class="good play" data-play="H">Hit</button><button class="good play" data-play="2B">Doble</button><button class="good play" data-play="3B">Triple</button><button class="primary play" data-play="HR">Jonrón</button><button class="walk play" data-play="BB">Base por bolas</button><button class="out play" data-play="K">Ponche</button><button class="out play" data-play="OUT">Out</button><button class="light" id="run">＋ Carrera</button></div></div>
+<div class="card"><h3>Control</h3><p class="muted" id="lastPlay">Sin jugadas</p><div class="row"><button class="light" id="undo">↶ Deshacer</button><button class="light" id="changeHalf">Cambiar media entrada</button></div><div class="row" style="margin-top:8px"><button class="danger" id="finishGame">Finalizar y guardar</button></div></div>
+</div>
+<div class="card innings" style="margin-top:12px"><h3>Marcador por entradas</h3><div id="inningTable"></div></div>
+</div>
+</section>
+
+<section id="history" class="view hidden"><div class="card"><h2>Partidos guardados</h2><div id="historyList"></div></div></section>
+<section id="season" class="view hidden"><div class="card"><h2>Estadísticas de temporada</h2><p class="muted">Se acumulan automáticamente a partir de los partidos guardados.</p><div style="overflow:auto"><table class="stats"><thead><tr><th>Jugador</th><th>JJ</th><th>AB</th><th>H</th><th>2B</th><th>3B</th><th>HR</th><th>R</th><th>BB</th><th>K</th><th>AVG</th></tr></thead><tbody id="seasonStats"></tbody></table></div></div></section>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+const DEFAULT_PLAYERS = [{"name": "Edwin Barroso", "number": "13"}, {"name": "Víctor Barroso", "number": "17"}, {"name": "Oscar Vázquez", "number": "7"}, {"name": "Iker Vázquez", "number": "19"}, {"name": "Miguel Cortes", "number": "20"}, {"name": "Sergio Cortes", "number": "23"}];
+const POS=["P","C","1B","2B","3B","SS","LF","CF","RF","BD"];
+let data=load();
+let game=null, snapshots=[];
+function load(){try{return JSON.parse(localStorage.getItem("batters_v02"))||{players:DEFAULT_PLAYERS,games:[]}}catch(e){return{players:DEFAULT_PLAYERS,games:[]}}}
+function save(){localStorage.setItem("batters_v02",JSON.stringify(data));document.querySelector("#saveState").textContent="✓ Guardado";setTimeout(()=>document.querySelector("#saveState").textContent="Guardado local",1000)}
+function toast(t){let e=document.querySelector("#toast");e.textContent=t;e.style.display="block";setTimeout(()=>e.style.display="none",1600)}
+function initials(n){return n.split(" ").slice(0,2).map(x=>x[0]).join("").toUpperCase()}
+function renderRoster(){
+ const html=data.players.map((p,i)=>`<div class="player"><div class="avatar">${initials(p.name)}</div><div><strong>#${p.number} ${p.name}</strong><div class="muted">Posición: se define en el lineup</div></div><button class="light editP" data-i="${i}">Editar</button></div>`).join("");
+ document.querySelector("#roster").innerHTML=html; document.querySelector("#homeRoster").innerHTML=html;
+ document.querySelectorAll(".editP").forEach(b=>b.onclick=()=>editPlayer(+b.dataset.i));
+}
+function editPlayer(i){let p=data.players[i],name=prompt("Nombre del jugador",p.name);if(name===null)return;let number=prompt("Número de uniforme",p.number);if(number===null)return;p.name=name.trim()||p.name;p.number=number.trim()||p.number;save();renderAll()}
+document.querySelector("#addPlayer").onclick=()=>{let name=prompt("Nombre del jugador");if(!name)return;let number=prompt("Número de uniforme")||"—";data.players.push({name:name.trim(),number:number.trim()});save();renderAll()}
+function setup(){
+ document.querySelector("#setupCard").classList.remove("hidden");document.querySelector("#liveGame").classList.add("hidden");
+ document.querySelector("#attendance").innerHTML=data.players.map((p,i)=>`<label class="player"><input type="checkbox" class="att" data-i="${i}" checked><div><strong>#${p.number} ${p.name}</strong></div><span>Presente</span></label>`).join("");
+ renderLineup();document.querySelectorAll(".att").forEach(x=>x.onchange=renderLineup);
+}
+function renderLineup(){
+ let ids=[...document.querySelectorAll(".att:checked")].map(x=>+x.dataset.i);
+ document.querySelector("#lineupSetup").innerHTML=ids.map((i,order)=>{let p=data.players[i];return `<div class="lineup-row"><strong>${order+1}</strong><span>#${p.number} ${p.name}</span><select data-player="${i}" class="pos">${POS.map(v=>`<option>${v}</option>`).join("")}</select></div>`}).join("")||'<p class="muted">Selecciona al menos un jugador.</p>';
+}
+document.querySelector("#beginGame").onclick=()=>{
+ let rows=[...document.querySelectorAll(".pos")]; if(!rows.length){toast("Selecciona jugadores");return}
+ let opponent=document.querySelector("#opponent").value.trim()||"Rival";
+ game={id:Date.now(),date:new Date().toLocaleDateString("es-MX"),season:document.querySelector("#seasonName").value.trim()||"Temporada 2026",opponent,score:0,oppScore:0,inning:1,half:"top",balls:0,strikes:0,outs:0,bases:{1:false,2:false,3:false},batter:0,
+ lineup:rows.map(r=>({player:+r.dataset.player,pos:r.value})),stats:{},innings:{1:{us:0,them:0}},last:"Inicio del partido"};
+ game.lineup.forEach(x=>game.stats[x.player]={AB:0,H:0,D2:0,D3:0,HR:0,R:0,BB:0,K:0});
+ snapshots=[];document.querySelector("#setupCard").classList.add("hidden");document.querySelector("#liveGame").classList.remove("hidden");renderGame()
+}
+function snap(){snapshots.push(JSON.stringify(game));if(snapshots.length>50)snapshots.shift()}
+function batterStat(){return game.stats[game.lineup[game.batter].player]}
+function advance(){game.batter=(game.batter+1)%game.lineup.length;game.balls=0;game.strikes=0}
+function scoreRuns(n){game.score+=n;game.innings[game.inning]??={us:0,them:0};game.innings[game.inning].us+=n;batterStat().R+=0}
+function play(type){
+ snap();let s=batterStat(),runs=0;
+ if(type==="BB"){s.BB++; if(game.bases[1]&&game.bases[2]&&game.bases[3])runs++;game.bases[3]=game.bases[3]||(game.bases[2]&&game.bases[1]);game.bases[2]=game.bases[2]||game.bases[1];game.bases[1]=true;advance()}
+ else if(type==="H"){s.AB++;s.H++;if(game.bases[3])runs++;game.bases[3]=game.bases[2];game.bases[2]=game.bases[1];game.bases[1]=true;advance()}
+ else if(type==="2B"){s.AB++;s.H++;s.D2++;runs+=(game.bases[3]?1:0)+(game.bases[2]?1:0);game.bases[3]=game.bases[1];game.bases[2]=true;game.bases[1]=false;advance()}
+ else if(type==="3B"){s.AB++;s.H++;s.D3++;runs+=(game.bases[1]?1:0)+(game.bases[2]?1:0)+(game.bases[3]?1:0);game.bases={1:false,2:false,3:true};advance()}
+ else if(type==="HR"){s.AB++;s.H++;s.HR++;runs=1+(game.bases[1]?1:0)+(game.bases[2]?1:0)+(game.bases[3]?1:0);s.R++;game.bases={1:false,2:false,3:false};advance()}
+ else if(type==="K"){s.AB++;s.K++;addOut();advance()}
+ else if(type==="OUT"){s.AB++;addOut();advance()}
+ if(runs){scoreRuns(runs);game.last=`${type}: ${runs} carrera${runs>1?"s":""}`}else game.last=type;
+ renderGame()
+}
+function addOut(){game.outs++;if(game.outs>=3)changeHalf()}
+function changeHalf(){game.outs=0;game.balls=0;game.strikes=0;game.bases={1:false,2:false,3:false};if(game.half==="top"){game.half="bottom"}else{game.half="top";game.inning++;game.innings[game.inning]??={us:0,them:0}}}
+document.querySelectorAll(".play").forEach(b=>b.onclick=()=>play(b.dataset.play));
+document.querySelector("#ball").onclick=()=>{snap();game.balls++;if(game.balls>=4)play("BB");else renderGame()}
+document.querySelector("#strike").onclick=()=>{snap();game.strikes++;if(game.strikes>=3)play("K");else renderGame()}
+document.querySelector("#out").onclick=()=>play("OUT");
+document.querySelector("#run").onclick=()=>{snap();scoreRuns(1);game.last="Carrera manual";renderGame()}
+document.querySelector("#changeHalf").onclick=()=>{snap();changeHalf();renderGame()}
+document.querySelector("#undo").onclick=()=>{if(!snapshots.length){toast("No hay nada que deshacer");return}game=JSON.parse(snapshots.pop());renderGame();toast("Jugada deshecha")}
+document.querySelectorAll(".base").forEach(b=>{if(!b.dataset.base)return;b.onclick=()=>{snap();let k=b.dataset.base;game.bases[k]=!game.bases[k];renderGame()}})
+function renderGame(){
+ document.querySelector("#ourScore").textContent=game.score;document.querySelector("#oppScore").textContent=game.oppScore;document.querySelector("#oppName").textContent=game.opponent;
+ document.querySelector("#inningLabel").textContent=game.inning+"ª "+(game.half==="top"?"▲":"▼");document.querySelector("#halfLabel").textContent=game.half==="top"?"Alta":"Baja";
+ ["balls","strikes","outs"].forEach(k=>document.querySelector("#"+k).textContent=game[k]);
+ document.querySelectorAll(".base[data-base]").forEach(b=>b.classList.toggle("on",game.bases[b.dataset.base]));
+ let li=game.lineup[game.batter],p=data.players[li.player],s=game.stats[li.player];
+ document.querySelector("#currentBatter").innerHTML=`<div class="player"><div class="avatar">${initials(p.name)}</div><div><strong>#${p.number} ${p.name}</strong><div class="muted">${li.pos} · AB ${s.AB} · H ${s.H} · BB ${s.BB} · K ${s.K}</div></div></div>`;
+ document.querySelector("#lastPlay").textContent="Última jugada: "+game.last;
+ let max=Math.max(7,...Object.keys(game.innings).map(Number));let heads="",us="",them="";
+ for(let i=1;i<=max;i++){heads+=`<th>${i}</th>`;us+=`<td>${game.innings[i]?.us??""}</td>`;them+=`<td>${game.innings[i]?.them??""}</td>`}
+ document.querySelector("#inningTable").innerHTML=`<table><thead><tr><th>Equipo</th>${heads}<th>R</th></tr></thead><tbody><tr><td>BATTERS</td>${us}<td><strong>${game.score}</strong></td></tr><tr><td>${game.opponent}</td>${them}<td><strong>${game.oppScore}</strong></td></tr></tbody></table>`;
+}
+document.querySelector("#finishGame").onclick=()=>{if(!confirm("¿Finalizar y guardar este partido?"))return;data.games.push(JSON.parse(JSON.stringify(game)));save();game=null;snapshots=[];renderAll();show("history");toast("Partido guardado")}
+function renderHistory(){let e=document.querySelector("#historyList");e.innerHTML=data.games.length?data.games.slice().reverse().map(g=>`<div class="player"><div class="avatar">⚾</div><div><strong>BATTERS ${g.score} – ${g.oppScore} ${g.opponent}</strong><div class="muted">${g.date} · ${g.season}</div></div></div>`).join(""):'<p class="muted">Todavía no hay partidos guardados.</p>'}
+function renderSeason(){
+ let agg={};data.players.forEach((p,i)=>agg[i]={JJ:0,AB:0,H:0,D2:0,D3:0,HR:0,R:0,BB:0,K:0});
+ data.games.forEach(g=>Object.entries(g.stats||{}).forEach(([i,s])=>{let a=agg[i];if(!a)return;a.JJ++;Object.keys(s).forEach(k=>a[k]=(a[k]||0)+(s[k]||0))}));
+ document.querySelector("#seasonStats").innerHTML=data.players.map((p,i)=>{let a=agg[i],avg=a.AB?(a.H/a.AB).toFixed(3).replace(/^0/,""):"—";return `<tr><td>#${p.number} ${p.name}</td><td>${a.JJ}</td><td>${a.AB}</td><td>${a.H}</td><td>${a.D2}</td><td>${a.D3}</td><td>${a.HR}</td><td>${a.R}</td><td>${a.BB}</td><td>${a.K}</td><td>${avg}</td></tr>`}).join("")
+}
+function renderAll(){renderRoster();renderHistory();renderSeason()}
+function show(id){document.querySelectorAll(".view").forEach(v=>v.classList.add("hidden"));document.querySelector("#"+id).classList.remove("hidden");document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.view===id));if(id==="game"&&!game)setup()}
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>show(t.dataset.view));document.querySelector("#startSetup").onclick=()=>show("game");
+renderAll();
+if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});
+</script>
+</body></html>
